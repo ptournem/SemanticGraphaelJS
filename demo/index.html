@@ -1,0 +1,57 @@
+<!doctype html>
+<html style="height: 100%">
+    <head>
+	<meta charset="utf-8">
+	<title>Demo - SemanticGraphaelJS</title>
+	<script src="src/jquery.js"></script>
+	<script src="src/mousewheel.jquery.js"></script>
+	<script src="src/raphael.js"></script>
+	<script src="src/raphael-svg-filter-min.js"></script>
+	<script src="../semanticGraphael.js"></script>
+	<script>
+
+	    $.fn.semanticGraphael.default.debug = true;
+	    $(document).ready(function () {
+		$('div').semanticGraphael({
+		    centralItem: {
+			label: "Pain",
+			imgUrl: "http://freebase.cdn.perfect-memory.com/7b7dd0769e92040ff22becbb70edc5fab9621cdb",
+			UID: "AZDSFDD"
+		    },
+		    connections: [{
+			    label: "Boulangerie",
+			    imgUrl: "https://www.googleapis.com/freebase/v1/image/m/02wv6th?key=AIzaSyCQVC9yA72POMg2VjiQhSJQQP1nf3ToZTs&maxwidth=125&maxheight=125&mode=fillcropmid&errorid=%2Ffreebase%2Fno_image_png",
+			    UID: "AZDSFDD",
+			    connectLabel: "S'achète en"
+			}, {
+			    label: "Eau",
+			    imgUrl: "http://commons.wikimedia.org/wiki/Special:FilePath/Iceberg_with_hole_near_Sandersons_Hope_2007-07-28_2.jpg?width=300",
+			    UID: "AZDSFDD",
+			    connectLabel: "Est composé de"
+			}, {
+			    label: "Farine",
+			    imgUrl: "https://www.googleapis.com/freebase/v1/image/m/0fkw3?key=AIzaSyCQVC9yA72POMg2VjiQhSJQQP1nf3ToZTs&maxwidth=80&maxheight=80&mode=fillcropmid&errorid=%2Ffreebase%2Fno_image_png",
+			    UID: "AZDSFDD",
+			    connectLabel: "Est composé de"
+			}, {
+			    label: "Levure",
+			    imgUrl: "https://www.googleapis.com/freebase/v1/image/m/01bfr_?key=AIzaSyCQVC9yA72POMg2VjiQhSJQQP1nf3ToZTs&maxwidth=125&maxheight=125&mode=fillcropmid&errorid=%2Ffreebase%2Fno_image_png",
+			    UID: "AZDSFDD",
+			    connectLabel: "Est composé de "
+			}, {
+			    label: "France",
+			    imgUrl: "https://www.googleapis.com/freebase/v1/image/m/0f8l9c?key=AIzaSyCQVC9yA72POMg2VjiQhSJQQP1nf3ToZTs&maxwidth=80&maxheight=80&mode=fillcropmid&errorid=%2Ffreebase%2Fno_image_png",
+			    UID: "AZDSFDD",
+			    connectLabel: "Se trouve en"
+			}]
+		});
+	    });
+
+	</script>
+    </head>
+    <body style="height:100% ; margin: 0; padding:0;">
+	<div id="holder" style="height:99%;">
+
+	</div>
+    </body>
+</html>
