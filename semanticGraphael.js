@@ -33,7 +33,8 @@
 	init: function (options) {
 	    debug("SemanticGraphael init");
 
-	    var settings = $.extend({}, $.fn.semanticGraphael.default.param, options);
+	    // merge passed parameters with default parameters
+	    var settings = $.extend({}, $.fn.semanticGraphael.default.initParam, options);
 
 	    debug("Init Setting");
 	    debug(settings);
@@ -41,14 +42,24 @@
 	    return this.each(function () {
 		debug("SemanticGraphael Created On " + $(this).attr('id'));
 
-		// creation of the svg DOM 
+		// svg DOM creation
 		var paper = new Raphael(this, $(this).width(), $(this).height());
-		$(this).data("semanticGraphael_paper", paper);
-		var itemSet = paper.set();
-		var id = 0;
-		var central = addItem(paper, itemSet, settings.centralItem.imgUrl, settings.centralItem.label, paper.width / 2, paper.height / 2);
-		var connections = addConnections(paper, itemSet, central, settings.connections);
 
+		// add the set
+		paper.itemSet = paper.set();
+
+		// add the central item at the paper center
+		paper.central = addItem(paper, settings.centralItem, paper.width / 2, paper.height / 2);
+
+		// add connections with the click callback
+		paper.connections = addConnections(paper, settings.connections, settings.onClickItem);
+
+		// allow user to move item, if the movable parameters is set to true 
+		if (settings.movable) {
+		    paper.central.drag(moveItem, moveStart, moveEnd).attr({cursor: 'move'});
+		}
+
+		// store the paper on the dom element 
 		$(this).data("semanticGraphael_paper", paper);
 	    });
 	},
@@ -66,9 +77,23 @@
 	 */
 	getPaper: function () {
 	    return $(this).data("semanticGraphael_paper");
+	},
+	/**
+	 * Clean papers of the targeted semanticGraphael 
+	 * @returns {each}
+	 */
+	clean: function () {
+	    return this.each(function () {
+		$(this).semanticGraphael('getPaper').remove();
+	    });
 	}
     };
 
+    /**
+     * Method called to init or use a method on the semanticGraphael instance 
+     * @param {Object|String} methodOrOptions
+     * @returns {each|string|Number}
+     */
     $.fn.semanticGraphael = function (methodOrOptions) {
 	if (methods[methodOrOptions]) {
 	    return methods[ methodOrOptions ].apply(this, Array.prototype.slice.call(arguments, 1));
@@ -106,14 +131,13 @@
     /**
      * Add an item centered on (x,y)
      * @param {RaphaelPaper} paper
-     * @param {RaphaelItemSet} itemSet
-     * @param {string} imgUrl
-     * @param {string} name
+     * @param {object[label,imgUrl]} item
      * @param {Number} x
      * @param {Number} y
+     * @param {Function} onClick
      * @returns {RaphaelItemSet}
      */
-    function addItem(paper, itemSet, imgUrl, name, x, y) {
+    function addItem(paper, item, x, y, onClick) {
 	// get parameters
 	var imgSize = $.fn.semanticGraphael.default.ItemOptions.imgSize;
 	var margin = $.fn.semanticGraphael.default.ItemOptions.textMargin;
@@ -128,11 +152,20 @@
 
 	// create the image and the text in an itemSet
 	var set = paper.set();
-	var img = paper.image(imgUrl, imgX, imgY, imgSize, imgSize);
-	var text = paper.text(textX, textY, name).attr({'font-size': fontSize});
+	var img = paper.image(item.imgUrl, imgX, imgY, imgSize, imgSize);
+	var text = paper.text(textX, textY, item.label).attr({'font-size': fontSize});
 	set.push(img);
 	set.push(text);
-	itemSet.push(set);
+	paper.itemSet.push(set);
+
+	if (typeof onClick === "function") {
+	    debug("click function added");
+	    set.click(function () {
+		onClick.call(set, item);
+	    }).attr({
+		cursor: 'pointer'
+	    });
+	}
 
 	// return the item itemSet
 	return set;
@@ -141,12 +174,11 @@
     /**
      * Add connections to the central item
      * @param {RaphaelPaper} paper
-     * @param {RaphaelItemSet} itemSet
-     * @param {RaphaelItem} centralItem
-     * @param {RaphaelItem[]} connections
+     * @param {object[]} connections
+     * @param {Function} onClick
      * @returns {object{items,connections}}
      */
-    function addConnections(paper, itemSet, centralItem, connections) {
+    function addConnections(paper, connections, onClick) {
 	var ret = {
 	    items: [],
 	    connections: []
@@ -154,7 +186,7 @@
 	// nb de connection connections.length;
 	var angle = 360 / connections.length;
 	var radius = getPaperRadius(paper);
-	var origin = getCentralItemOrigin(centralItem);
+	var origin = getCentralItemOrigin(paper.central);
 	debug("origin");
 	debug(origin);
 
@@ -165,7 +197,7 @@
 
 	var actualAngle = 0;
 	$.each(connections, function (index, item) {
-	    var conn = addConnection(paper, itemSet, centralItem, item, origin, radius, actualAngle);
+	    var conn = addConnection(paper, item, origin, radius, actualAngle, onClick);
 
 	    ret.connections.push(conn.connection);
 	    ret.items.push(conn.item);
@@ -178,18 +210,17 @@
     /**
      * Add a connection item
      * @param {RaphaelPaper} paper
-     * @param {RaphaelItemSet} itemSet
-     * @param {RaphaelItem} centralItem
-     * @param {object{imgUrl,label,connectLabel} item
+     * @param {object[imgUrl,label,connectLabel]} item
      * @param {RaphaelItem} origin
      * @param {Number} radius
      * @param {Number} angle
+     * @param {Function} onClick
      * @returns {object{item,connection}}
      */
-    function addConnection(paper, itemSet, centralItem, item, origin, radius, angle) {
+    function addConnection(paper, item, origin, radius, angle, onClick) {
 	var pos = getItemPosition(origin, radius, angle);
-	var rItem = addItem(paper, itemSet, item.imgUrl, item.label, pos.x, pos.y);
-	var conn = paper.connection(centralItem, rItem, "#eee", item.connectLabel);
+	var rItem = addItem(paper, item, pos.x, pos.y, onClick);
+	var conn = paper.connection(paper.central, rItem, "#eee", item.connectLabel);
 
 	return {item: rItem, connection: conn};
     }
@@ -243,20 +274,48 @@
 	};
     }
 
+    /**
+     * True if a is below b
+     * @param {RaphaelItem} a
+     * @param {RaphaelItem} b
+     * @param {Number} margin
+     * @returns {Boolean}
+     */
     function isBelow(a, b, margin) {
-	return b.y2 + margin < a.y;
+	return (b.y2 + margin) < a.y;
     }
 
+    /**
+     * True if a is above b
+     * @param {RaphaelItem} a
+     * @param {RaphaelItem} b
+     * @param {Number} margin
+     * @returns {Boolean}
+     */
     function isAbove(a, b, margin) {
-	return a.y2 + margin < b.y;
+	return (a.y2 + margin) < b.y;
     }
 
+    /**
+     * True if a is on b's right 
+     * @param {RaphaelItem} a
+     * @param {RaphaelItem} b
+     * @param {Number} margin
+     * @returns {Boolean}
+     */
     function isOnRight(a, b, margin) {
-	return b.x2 + margin < a.x;
+	return (b.x2 + margin) < a.x;
     }
 
+    /**
+     * True if a is on b's left
+     * @param {RaphaelItem} a
+     * @param {RaphaelItem} b
+     * @param {Number} margin
+     * @returns {Boolean}
+     */
     function isOnLeft(a, b, margin) {
-	return a.x2 + margin < b.x;
+	return (a.x2 + margin) < b.x;
     }
 
     /**
@@ -284,22 +343,22 @@
 	// get the intercept
 	var interceptXOY = centBy - (centBx * slopeXOY);    // coordinate system XOY
 	var interceptYOX = centBx - (centBy * slopeYOX);    // coordinate system YOX
-	
+
 	// init return variable 
 	var x1 = null, x2 = null, y1 = null, y2 = null;
 
 	var calculated = false; // the point hasn't been calculated yet
 
-	if (ABBox.x2 + margin < BBBox.x) { // A is on the left of B 
+	if (isOnLeft(ABBox, BBBox, margin)) { // A is on the left of B 
 	    x1 = ABBox.x2 + margin;
 	    x2 = BBBox.x - margin;
-	} else if (BBBox.x2 + margin < ABBox.x) { // A is on the right of B 
+	} else if (isOnRight(ABBox, BBBox, margin)) { // A is on the right of B 
 	    x1 = BBBox.x2 + margin;
 	    x2 = ABBox.x - margin;
-	} else if (ABBox.y2 + margin < BBBox.y) { // A is above B 
+	} else if (isAbove(ABBox, BBBox, margin)) { // A is above B 
 	    y1 = ABBox.y2 + margin;
 	    y2 = BBBox.y - margin;
-	} else if (BBBox.y2 + margin < ABBox.y) { // A is below B 
+	} else if (isBelow(ABBox, BBBox, margin)) { // A is below B 
 	    y1 = BBBox.y2 + margin;
 	    y2 = ABBox.y - margin;
 	}
@@ -376,13 +435,12 @@
     };
 
     /**
-     * Raffraichit les connections après un move 
-     * @param {RaphaelItemSet[]} connections
+     * Refresh connection , after a move for example
      * @returns {undefined}
      */
-    Raphael.fn.refreshConnection = function (connections) {
-	for (var i = connections.length; i--; ) {
-	    connection(connections[i]);
+    Raphael.fn.refreshConnection = function () {
+	for (var i = this.connections.connections.length; i--; ) {
+	    this.connection(this.connections.connections[i]);
 	}
     };
 
@@ -413,6 +471,62 @@
 	// return the global variable 
 	return $.fn.semanticGraphael.default.connectionOptions.fontFilter;
     }
+
+    /**
+     * local variable used for the move
+     */
+    var moveX, moveY;
+
+    /**
+     * Callback for move start 
+     * @returns {undefined}
+     */
+    function moveStart() {
+	debug("start move");
+
+	// init move variable
+	moveX = moveY = 0;
+	// for each item, store its origin position
+	$(this.paper.itemSet).each(function () {
+	    $(this).each(function () {
+		this.xo = this.attr('x');
+		this.yo = this.attr('y');
+	    });
+	});
+    }
+
+    /**
+     * Callback for moveItem
+     * @param {Number} dx
+     * @param {Number} dy
+     * @returns {undefined}
+     */
+    function moveItem(dx, dy) {
+	debug("move item(" + dx + "," + dy + ")");
+	// store the delta
+	moveX = dx;
+	moveY = dy;
+
+	// apply delta
+	this.paper.itemSet.transform('t' + dx + ',' + dy);
+	// refresh connection between items
+	this.paper.refreshConnection();
+    }
+
+    /**
+     * Callback for move end
+     * @returns {undefined}
+     */
+    function moveEnd() {
+	debug("end move (" + moveX + "," + moveY + ")");
+	// for each item, apply the delta to its origin position
+	$(this.paper.itemSet).each(function () {
+	    $(this).each(function () {
+		this.attr({x: moveX + this.xo, y: moveY + this.yo}).transform('');
+	    });
+	});
+    }
+
 
 
     /**
@@ -479,7 +593,15 @@
 	    /**
 	     * If true, the graph is movable 
 	     */
-	    movable: true
+	    movable: true,
+	    /**
+	     * Callback called when an item ( not the central one ) is clicked 
+	     * @param {object} item
+	     * @returns {undefined}
+	     */
+	    onClickItem: function (item) {
+		// make what you want here
+	    }
 	}
     };
 
