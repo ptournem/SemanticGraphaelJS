@@ -45,6 +45,11 @@
 		// svg DOM creation
 		var paper = new Raphael(this, $(this).width(), $(this).height());
 
+		// store event functions 
+		paper.onClickItem = settings.onClickItem;
+		paper.beforeAddItem = settings.beforeAddItem;
+		paper.beforeAddConnection = settings.beforeAddConnection;
+
 		// add the set
 		paper.itemSet = paper.set();
 
@@ -52,7 +57,7 @@
 		paper.central = addItem(paper, settings.centralItem, paper.width / 2, paper.height / 2);
 
 		// add connections with the click callback
-		paper.connections = addConnections(paper, settings.connections, settings.onClickItem);
+		paper.connections = addConnections(paper, settings.connections);
 
 		// allow user to move item, if the movable parameters is set to true 
 		if (settings.movable) {
@@ -134,10 +139,16 @@
      * @param {object[label,imgUrl]} item
      * @param {Number} x
      * @param {Number} y
-     * @param {Function} onClick
+     * @param {Boolean} onClick
      * @returns {RaphaelItemSet}
      */
     function addItem(paper, item, x, y, onClick) {
+	// call beforeAddItem
+	if (typeof paper.beforeAddItem === "function") {
+	    debug("call beforeAddItem");
+	    item = paper.beforeAddItem.call(item);
+	}
+
 	// get parameters
 	var imgSize = $.fn.semanticGraphael.default.ItemOptions.imgSize;
 	var margin = $.fn.semanticGraphael.default.ItemOptions.textMargin;
@@ -158,10 +169,10 @@
 	set.push(text);
 	paper.itemSet.push(set);
 
-	if (typeof onClick === "function") {
+	if (onClick && typeof paper.onClickItem === "function") {
 	    debug("click function added");
 	    set.click(function () {
-		onClick.call(set, item);
+		paper.onClickItem.call(set, item);
 	    }).attr({
 		cursor: 'pointer'
 	    });
@@ -175,16 +186,32 @@
      * Add connections to the central item
      * @param {RaphaelPaper} paper
      * @param {object[]} connections
-     * @param {Function} onClick
      * @returns {object{items,connections}}
      */
-    function addConnections(paper, connections, onClick) {
+    function addConnections(paper, connections) {
 	var ret = {
 	    items: [],
 	    connections: []
 	};
+
+	// create the real tab that will be use for adding connections
+	var conns = [];
+	// call the beforeAddConnection if is a function
+	if (typeof paper.beforeAddConnection === "function") {
+	    $.each(connections, function (index, item) {
+		item = paper.beforeAddConnection.call(item);
+		if (item !== false) {
+		    conns.push(item);
+		}
+	    });
+	} else { // else use the given by parameter tab 
+	    conns = connections;
+	}
+	debug("connections ( before " + connections.length + ",after " + conns.length + ")");
+	debug(connections);
+	debug(conns);
 	// nb de connection connections.length;
-	var angle = 360 / connections.length;
+	var angle = 360 / conns.length;
 	var radius = getPaperRadius(paper);
 	var origin = getCentralItemOrigin(paper.central);
 	debug("origin");
@@ -193,15 +220,17 @@
 
 
 
-	debug(connections.length + " items with a rayon of " + radius + " pixels and " + angle + " ° per item");
+	debug(conns.length + " items with a rayon of " + radius + " pixels and " + angle + " ° per item");
 
 	var actualAngle = 0;
-	$.each(connections, function (index, item) {
-	    var conn = addConnection(paper, item, origin, radius, actualAngle, onClick);
+	$.each(conns, function (index, item) {
+	    var conn = addConnection(paper, item, origin, radius, actualAngle);
+	    if (conn !== null) {
+		ret.connections.push(conn.connection);
+		ret.items.push(conn.item);
+		actualAngle += angle;
+	    }
 
-	    ret.connections.push(conn.connection);
-	    ret.items.push(conn.item);
-	    actualAngle += angle;
 	});
 
 	return ret;
@@ -214,12 +243,11 @@
      * @param {RaphaelItem} origin
      * @param {Number} radius
      * @param {Number} angle
-     * @param {Function} onClick
      * @returns {object{item,connection}}
      */
-    function addConnection(paper, item, origin, radius, angle, onClick) {
+    function addConnection(paper, item, origin, radius, angle) {
 	var pos = getItemPosition(origin, radius, angle);
-	var rItem = addItem(paper, item, pos.x, pos.y, onClick);
+	var rItem = addItem(paper, item, pos.x, pos.y, true);
 	var conn = paper.connection(paper.central, rItem, "#eee", item.connectLabel);
 
 	return {item: rItem, connection: conn};
@@ -601,6 +629,22 @@
 	     */
 	    onClickItem: function (item) {
 		// make what you want here
+	    },
+	    /**
+	     * Callback called when an item is going to be added 
+	     * The this argument is the item
+	     * @returns {this}
+	     */
+	    beforeAddItem: function () {
+		return this;
+	    },
+	    /**
+	     * Callback called when a connection is going to be added
+	     * The this argument is the item
+	     * @returns {this}
+	     */
+	    beforeAddConnection: function () {
+		return this;
 	    }
 	}
     };

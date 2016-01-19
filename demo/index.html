@@ -16,13 +16,15 @@
 		    centralItem: {
 			label: "Pain",
 			imgUrl: "http://freebase.cdn.perfect-memory.com/7b7dd0769e92040ff22becbb70edc5fab9621cdb",
-			UID: "freebase-pain"
+			UID: "freebase-pain",
+			freebase: true
 		    },
 		    connections: [{
 			    label: "Boulangerie",
 			    imgUrl: "https://www.googleapis.com/freebase/v1/image/m/02wv6th?key=AIzaSyCQVC9yA72POMg2VjiQhSJQQP1nf3ToZTs&maxwidth=125&maxheight=125&mode=fillcropmid&errorid=%2Ffreebase%2Fno_image_png",
 			    UID: "freebase-boulangerie",
-			    connectLabel: "S'achète en"
+			    connectLabel: "S'achète en",
+			    freebase: true
 			}, {
 			    label: "Eau",
 			    imgUrl: "http://commons.wikimedia.org/wiki/Special:FilePath/Iceberg_with_hole_near_Sandersons_Hope_2007-07-28_2.jpg?width=300",
@@ -44,16 +46,37 @@
 			    UID: "freebase-france",
 			    connectLabel: "Se trouve en"
 			}],
-			onClickItem : function(item){
-			    window.location = window.location.href.split('#')[0] + "#" + item.UID;
+		    onClickItem: function (item) {
+			window.location = window.location.href.split('#')[0] + "#" + item.UID;
+		    },
+		    beforeAddItem: function () {
+			// if the freebase attr is set, add the text (From Freebase) after the label 
+			if (this.freebase) {
+			    this.label = this.label + " (FreeBase)";
 			}
+
+			return this;
+		    },
+		    beforeAddConnection: function () {
+			// if the connection is true, the function return false and the item is rejected => not shown
+			if (Math.random() * 2 > 1) {
+			    return false;
+			}
+			// if the freebase attr is set, add the text (From Freebase) after the label 
+			if (this.freebase) {
+			    this.connectLabel = this.connectLabel + " (From FreeBase)";
+			}
+
+			return this;
+		    }
 		});
 	    });
 
 	</script>
     </head>
     <body style="height:100% ; margin: 0; padding:0;">
-	<div id="holder" style="height:99%;">
+	<p>Refresh to see the random function working</p>
+	<div id="holder" style="height:80%;">
 
 	</div>
     </body>
