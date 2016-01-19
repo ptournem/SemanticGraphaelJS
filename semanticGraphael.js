@@ -1,5 +1,5 @@
 /*!
- * Semantic Graphael JavaScript Library v0.1
+ * Semantic Graphael JavaScript Library v0.2
  *
  * Copyright 2016 Paul Tournemaine
  * Released under the MIT license
@@ -49,6 +49,7 @@
 		paper.onClickItem = settings.onClickItem;
 		paper.beforeAddItem = settings.beforeAddItem;
 		paper.beforeAddConnection = settings.beforeAddConnection;
+		paper.afterAddConnection = settings.afterAddConnection;
 
 		// add the set
 		paper.itemSet = paper.set();
@@ -228,6 +229,11 @@
 	    if (conn !== null) {
 		ret.connections.push(conn.connection);
 		ret.items.push(conn.item);
+
+		if (typeof paper.afterAddConnection === "function") {
+		    paper.afterAddConnection.call(item, conn);
+		}
+
 		actualAngle += angle;
 	    }
 
@@ -645,6 +651,16 @@
 	     */
 	    beforeAddConnection: function () {
 		return this;
+	    },
+	    /**
+	     * Callback called after a connection has been added
+	     * The this argument is the item
+	     * @param {object} conn object containing the connected item (item) and the connection item (connection)
+	     * @returns {undefined}
+	     */
+	    afterAddConnection: function (conn) {
+		debug("afterAddConnection (this)");
+		debug(this);
 	    }
 	}
     };

@@ -59,7 +59,7 @@
 		    },
 		    beforeAddConnection: function () {
 			// if the connection is true, the function return false and the item is rejected => not shown
-			if (Math.random() * 2 > 1) {
+			if (Math.random() * 5 > 4) {
 			    return false;
 			}
 			// if the freebase attr is set, add the text (From Freebase) after the label 
@@ -68,14 +68,30 @@
 			}
 
 			return this;
+		    },
+		    afterAddConnection: function (conn) {
+			if (Math.random() * 5 > 2) {
+			    conn.item.forEach(function (item) {
+				item[0].classList.add('toHide');
+			    });
+			    $(conn.connection.text[0]).attr('class', 'toHide');
+			    $(conn.connection.line[0]).attr('class', 'toHide');
+			}
 		    }
 		});
+
+
+		$('button').click(function () {
+		    $('.toHide').toggle();
+		});
 	    });
+
 
 	</script>
     </head>
     <body style="height:100% ; margin: 0; padding:0;">
 	<p>Refresh to see the random function working</p>
+	<button> Toggle random show/hide </button>
 	<div id="holder" style="height:80%;">
 
 	</div>
